@@ -38,11 +38,9 @@ for i in range(len(urlPagesAltex)):
         storeLink += url
         j += 1
 
-
 # remove empty records and "</"
 oldPrice[:] = [str(x).strip("</") for x in oldPrice]
 oldPrice[:] = [x if str(x) != "Non" else "" for x in oldPrice]
-
 
 df = pandas.DataFrame({"Titlu": productsTitle, "productsPrice": productsPrice, "productsPriceII": productsPriceII, "Original Price": oldPrice})
 #concat the two temp price columns
