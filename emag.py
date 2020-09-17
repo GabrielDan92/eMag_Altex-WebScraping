@@ -1,4 +1,3 @@
-import os
 import re
 import ctypes
 import pandas
@@ -15,20 +14,20 @@ productsPriceII = []
 productsPriceOld = []
 productsPriceOldII = []
 productLink = []
-os.chdir("C:\\Users\\gabyt\\Desktop")
 
 while True:
     userInput = input("Adauga link-ul eMag aici: ")
     if userInput != "":
         break
 
-url = userInput
+# url = "https://www.emag.ro/aparate-foto-mirrorless"
 # url = "https://www.emag.ro/telefoane-mobile"
 # url = "https://www.emag.ro/tablete"
 # url = "https://www.emag.ro/solid-state_drive_ssd_"
 # url = "https://www.emag.ro/jocuri-consola-pc"
 # url = "https://www.emag.ro/placi_video"
 # url = "https://www.emag.ro/solid-state_drive_ssd_"
+# url = "https://www.emag.ro/televizoare"
 
 def emag(i):
     global productsTitle
@@ -61,6 +60,9 @@ def emag(i):
 
 # find the page count
 try:
+    url = userInput
+    urlFileName = url.split("/")
+    urlFileName = urlFileName[3]
     url += "/c"
     user_agent = str(requests.get('https://httpbin.org/user-agent'))
     data = requests.get(url=url, headers={"user-agent": user_agent})
@@ -117,7 +119,7 @@ try:
     df = df[["Titlu", "Pret Original", "Pret Final", "Link"]]
     df = df[df.Titlu != '']
     df.set_index("Titlu", inplace=True)
-    df.to_excel(str(date.today().strftime("%b-%d-%Y")) + "_eMag.xlsx")
+    df.to_excel(str(date.today().strftime("%b-%d-%Y"))+"_eMag_"+urlFileName+".xlsx")
     ctypes.windll.user32.MessageBoxW(0, "Preturile au fost extrase.", "Warning", 0)
 except:
     ctypes.windll.user32.MessageBoxW(0, "Link-ul nu este valid. Te rog incearca din nou.", "Warning", 0)
