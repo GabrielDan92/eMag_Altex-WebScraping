@@ -51,7 +51,7 @@ def emag(i):
     productsTitleTemp = [x.find("h2", {"class": "card-body"}) for x in products]
     productsTitle += [re.findall(r'(((?<=title=\").*([^\r]*)(?=">)))', str(x)) for x in productsTitleTemp]
     productsPriceTempOld = [x.find("p", {"class": "product-old-price"}) for x in products]
-    productsPriceOld += [re.findall(r'((?<=\<s>).*([^\r]*)(?=<sup>.*<\/sup> <span>Lei<\/span><\/s><span class="product-this-deal">))', str(x)) for x in productsPriceTempOld]
+    productsPriceOld += [re.findall(r'((?<=\<s>).*([^\r]*)(?=<sup>.*<\/sup> <span>Lei<\/span><\/s>))', str(x)) for x in productsPriceTempOld]
     productsPriceOldII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=<\/sup> <span>Lei<\/span><\/s>))', str(x)) for x in productsPriceTempOld]
     productsPriceTemp = [x.find("p", {"class": "product-new-price"}) for x in products]
     productsPrice += [re.findall(r'((?<=\<p class="product-new-price">).*([^\r]*)(?=<sup>))', str(x)) for x in productsPriceTemp]
