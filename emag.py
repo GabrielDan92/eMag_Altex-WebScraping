@@ -7,13 +7,15 @@ from bs4 import BeautifulSoup
 from datetime import date
 
 
-### THREADING WEBSCRAPING ###
 productsTitle = []
 productsPrice = []
 productsPriceII = []
 productsPriceOld = []
 productsPriceOldII = []
 productLink = []
+url = "https://www.emag.ro/jocuri-consola-pc"
+url = "https://www.emag.ro/placi_video"
+url = "https://www.emag.ro/solid-state_drive_ssd_"
 
 def emag(i):
     global productsTitle
@@ -22,13 +24,14 @@ def emag(i):
     global productsPriceII
     global productsPrice
     global productLink
-    url = f"https://www.emag.ro/jocuri-consola-pc/p{i}/c"
+    urlIterate = url + f"/p{i}/c"
     # user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10; rv:33.0) Gecko/20100101 Firefox/33.0"
     user_agent = str(requests.get('https://httpbin.org/user-agent'))
     data = requests.get(url=url, headers={"user-agent": user_agent})
     soup = BeautifulSoup(data.text, "html.parser")
     products = [x for x in soup.find_all("div", {"class": "card-item"})]
-    print(f"Current page: {i}")
+    # print(f"Current page: {i}")
+    print(f"Accessing page {urlIterate}")
     if len(products) == 0:
         print("Page: " + str(int(i) - 1))
         return
@@ -42,8 +45,9 @@ def emag(i):
     productsPrice += [re.findall(r'((?<=\<p class="product-new-price">).*([^\r]*)(?=<sup>))', str(x)) for x in productsPriceTemp]
     productLink += [re.findall(r'(https://www.emag.ro.*?/\")', str(x)) for x in products]
 
+
 # find the page count
-url = "https://www.emag.ro/jocuri-consola-pc/c"
+url += "/c"
 user_agent = str(requests.get('https://httpbin.org/user-agent'))
 data = requests.get(url=url, headers={"user-agent": user_agent})
 soup = BeautifulSoup(data.text, "html.parser")
@@ -98,4 +102,5 @@ df["Pret Original"][df["Pret Original"] == ","] = ""
 # drop empty columns and reassign the columns to the dataframe
 df = df[["Titlu", "Pret Original", "Pret Final", "Link"]]
 df = df[df.Titlu != '']
+df.set_index("Titlu", inplace=True)
 df.to_excel(str(date.today().strftime("%b-%d-%Y")) + "_eMag.xlsx")
