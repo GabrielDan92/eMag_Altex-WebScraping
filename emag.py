@@ -23,6 +23,9 @@ while True:
         break
 
 url = userInput
+# url = "https://www.emag.ro/telefoane-mobile"
+# url = "https://www.emag.ro/tablete"
+# url = "https://www.emag.ro/solid-state_drive_ssd_"
 # url = "https://www.emag.ro/jocuri-consola-pc"
 # url = "https://www.emag.ro/placi_video"
 # url = "https://www.emag.ro/solid-state_drive_ssd_"
@@ -48,11 +51,11 @@ def emag(i):
     productsTitleTemp = [x.find("h2", {"class": "card-body"}) for x in products]
     productsTitle += [re.findall(r'(((?<=title=\").*([^\r]*)(?=">)))', str(x)) for x in productsTitleTemp]
     productsPriceTempOld = [x.find("p", {"class": "product-old-price"}) for x in products]
-    productsPriceOldII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=</sup>))', str(x)) for x in productsPriceTempOld]
-    productsPriceOld += [re.findall(r'((?<=\<s>).*([^\r]*)(?=<sup>))', str(x)) for x in productsPriceTempOld]
+    productsPriceOld += [re.findall(r'((?<=\<s>).*([^\r]*)(?=<sup>.*<\/sup> <span>Lei<\/span><\/s><span class="product-this-deal">))', str(x)) for x in productsPriceTempOld]
+    productsPriceOldII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=<\/sup> <span>Lei<\/span><\/s>))', str(x)) for x in productsPriceTempOld]
     productsPriceTemp = [x.find("p", {"class": "product-new-price"}) for x in products]
-    productsPriceII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=</sup>))', str(x)) for x in productsPriceTemp]
     productsPrice += [re.findall(r'((?<=\<p class="product-new-price">).*([^\r]*)(?=<sup>))', str(x)) for x in productsPriceTemp]
+    productsPriceII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=</sup>))', str(x)) for x in productsPriceTemp]
     productLink += [re.findall(r'(https://www.emag.ro.*?/\")', str(x)) for x in products]
 
 
