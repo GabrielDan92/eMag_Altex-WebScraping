@@ -15,20 +15,6 @@ productsPriceOld = []
 productsPriceOldII = []
 productLink = []
 
-while True:
-    userInput = input("Adauga link-ul eMag aici: ")
-    if userInput != "":
-        break
-
-# url = "https://www.emag.ro/aparate-foto-mirrorless"
-# url = "https://www.emag.ro/telefoane-mobile"
-# url = "https://www.emag.ro/tablete"
-# url = "https://www.emag.ro/solid-state_drive_ssd_"
-# url = "https://www.emag.ro/jocuri-consola-pc"
-# url = "https://www.emag.ro/placi_video"
-# url = "https://www.emag.ro/solid-state_drive_ssd_"
-# url = "https://www.emag.ro/televizoare"
-
 def emag(i):
     global productsTitle
     global productsPriceOldII
@@ -58,7 +44,11 @@ def emag(i):
     productLink += [re.findall(r'(https://www.emag.ro.*?/\")', str(x)) for x in products]
 
 
-# find the page count
+while True:
+    userInput = input("Adauga link-ul eMag aici: ")
+    if userInput != "":
+        break
+        
 try:
     url = userInput
     urlFileName = url.split("/")
@@ -67,6 +57,8 @@ try:
     user_agent = str(requests.get('https://httpbin.org/user-agent'))
     data = requests.get(url=url, headers={"user-agent": user_agent})
     soup = BeautifulSoup(data.text, "html.parser")
+    
+    # find the page count
     pageCount = soup.find("span", {"class": "visible-xs"})
     pageCount = re.findall(r'((?<=\">1 din ).*([^\r]*)(?=</span>))', str(pageCount))
     pageCount = str(pageCount[0]).strip("('")
@@ -115,7 +107,7 @@ try:
     # replace empty values "," with blank values
     df["Pret Original"][df["Pret Original"] == ","] = ""
 
-    # drop empty columns and reassign the columns to the dataframe
+    # drop empty columns and reassign the existing columns back to the dataframe
     df = df[["Titlu", "Pret Original", "Pret Final", "Link"]]
     df = df[df.Titlu != '']
     df.set_index("Titlu", inplace=True)
