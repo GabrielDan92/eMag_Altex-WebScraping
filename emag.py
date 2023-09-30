@@ -1,117 +1,175 @@
 import re
-import ctypes
-import pandas
+import pandas as pd
 import requests
 import threading
-import requests_random_user_agent
 from bs4 import BeautifulSoup
 from datetime import date
+import ctypes
 
 
-productsTitle = []
-productsPrice = []
-productsPriceII = []
-productsPriceOld = []
-productsPriceOldII = []
-productLink = []
+class EmagScraper:
+    """
+    A class for scraping product data from eMag and processing it.
 
-def emag(i):
-    global productsTitle
-    global productsPriceOldII
-    global productsPriceOld
-    global productsPriceII
-    global productsPrice
-    global productLink
-    urlIterate = url + f"/p{i}/c"
-    # user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10; rv:33.0) Gecko/20100101 Firefox/33.0"
-    user_agent = str(requests.get('https://httpbin.org/user-agent'))
-    data = requests.get(url=url, headers={"user-agent": user_agent})
-    soup = BeautifulSoup(data.text, "html.parser")
-    products = [x for x in soup.find_all("div", {"class": "card-item"})]
-    # print(f"Current page: {i}")
-    print(f"Accessing page {urlIterate}")
-    if len(products) == 0:
-        print("Page: " + str(int(i) - 1))
-        return
-    productsTitleTemp = [x.find("h2", {"class": "card-body"}) for x in products]
-    productsTitle += [re.findall(r'(((?<=title=\").*([^\r]*)(?=">)))', str(x)) for x in productsTitleTemp]
-    productsPriceTempOld = [x.find("p", {"class": "product-old-price"}) for x in products]
-    productsPriceOld += [re.findall(r'((?<=\<s>).*([^\r]*)(?=<sup>.*<\/sup> <span>Lei<\/span><\/s>))', str(x)) for x in productsPriceTempOld]
-    productsPriceOldII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=<\/sup> <span>Lei<\/span><\/s>))', str(x)) for x in productsPriceTempOld]
-    productsPriceTemp = [x.find("p", {"class": "product-new-price"}) for x in products]
-    productsPrice += [re.findall(r'((?<=\<p class="product-new-price">).*([^\r]*)(?=<sup>))', str(x)) for x in productsPriceTemp]
-    productsPriceII += [re.findall(r'((?<=\<sup>).*([^\r]*)(?=</sup>))', str(x)) for x in productsPriceTemp]
-    productLink += [re.findall(r'(https://www.emag.ro.*?/\")', str(x)) for x in products]
+    Attributes:
+        products_title (list): A list to store product titles.
+        products_price (list): A list to store product prices.
+        products_price_ii (list): A list to store product price fractions.
+        products_price_old (list): A list to store original product prices.
+        products_price_old_ii (list): A list to store original product price fractions.
+        product_link (list): A list to store product links.
+        page_count (int): The total number of pages to scrape.
+    """
+
+    def __init__(self):
+        self.products_title = []
+        self.products_price = []
+        self.products_price_ii = []
+        self.products_price_old = []
+        self.products_price_old_ii = []
+        self.product_link = []
+
+    def scrape_emag(self, url, page):
+        """
+        Scrape product data from a specific eMag page and store it in class attributes.
+
+        Args:
+            url (str): The URL of the eMag page to scrape.
+            page (int): The page number being scraped.
+        """
+        user_agent = str(requests.get('https://httpbin.org/user-agent'))
+        data = requests.get(url=url, headers={"user-agent": user_agent})
+        soup = BeautifulSoup(data.text, "html.parser")
+        products = soup.find_all("div", {"class": "card-item"})
+
+        for product in products:
+            self.extract_product_info(product)
+
+        print(f"Scraped page {page}/{self.page_count}")
+
+    def extract_product_info(self, product):
+        """
+        Extract product information (title, price, and link) from a product card.
+
+        Args:
+            product: The BeautifulSoup object representing a product card.
+        """
+        title = product.find("h2", {"class": "card-body"})
+        price_old = product.find("p", {"class": "product-old-price"})
+        price_new = product.find("p", {"class": "product-new-price"})
+
+        if title:
+            self.products_title.append(title.find("a")["title"])
+        if price_old:
+            price_old_text = price_old.find("s").text
+            price_old_ii = price_old.find("sup").text
+            self.products_price_old.append(price_old_text)
+            self.products_price_old_ii.append(price_old_ii)
+        if price_new:
+            price_new_text = price_new.find("span").text
+            price_new_ii = price_new.find("sup").text
+            self.products_price.append(price_new_text)
+            self.products_price_ii.append(price_new_ii)
+        if title:
+            self.product_link.append("https://www.emag.ro" + title.find("a")["href"])
+
+    def process_data(self, url):
+        """
+        Process scraped data, clean it, and save it to an Excel file.
+
+        Args:
+            url (str): The eMag URL to scrape.
+        """
+        try:
+            self.scrape_emag_pages(url)
+            df = self.create_dataframe()
+            self.clean_data(df)
+            self.save_to_excel(df, url)
+            ctypes.windll.user32.MessageBoxW(0, "All prices have been extracted.", "Warning", 0)
+        except Exception as e:
+            ctypes.windll.user32.MessageBoxW(0, f"Error: {str(e)}", "Error", 0)
+
+    def scrape_emag_pages(self, url):
+        """
+        Scrape multiple pages of eMag products concurrently using threads.
+
+        Args:
+            url (str): The base eMag URL.
+        """
+        data = requests.get(url)
+        soup = BeautifulSoup(data.text, "html.parser")
+        page_count = soup.find("span", {"class": "visible-xs"})
+        page_count = re.findall(r'((?<=\">1 din ).*([^\r]*)(?=</span>))', str(page_count))
+        self.page_count = int(str(page_count[0]).strip("('"))
+
+        threads = []
+        for i in range(1, self.page_count + 1):
+            thread_obj = threading.Thread(target=self.scrape_emag, args=(url + f"/p{i}/c", i))
+            threads.append(thread_obj)
+            thread_obj.start()
+
+        for thread in threads:
+            thread.join()
+
+    def create_dataframe(self):
+        """
+        Create a Pandas DataFrame from scraped data.
+
+        Returns:
+            pd.DataFrame: The DataFrame containing scraped product data.
+        """
+        data = {
+            "Title": self.products_title,
+            "Original Price": [f"{p}, {ii}" for p, ii in zip(self.products_price_old, self.products_price_old_ii)],
+            "Current Price": [f"{p}, {ii}" for p, ii in zip(self.products_price, self.products_price_ii)],
+            "Link": self.product_link,
+        }
+        df = pd.DataFrame(data)
+        df = df[df['Title'] != '']
+        df.set_index("Title", inplace=True)
+        return df
+
+    def clean_data(self, df):
+        """
+        Clean the scraped data by removing unwanted characters.
+
+        Args:
+            df (pd.DataFrame): The DataFrame containing scraped data.
+        """
+        bad_chars = [
+            ('\[\(\'', ''),
+            ('\,\)\]', ''),
+            ('\[\]', ''),
+            ('\[\'', ''),
+            ('\'', ''),
+            ('/\"', ''),
+            (', \)\]', ''),
+            ('\]', ''),
+            ('\&amp\;#039\;', '\'')
+        ]
+
+        for old, new in bad_chars:
+            df["Original Price"] = df["Original Price"].str.replace(old, new)
+            df["Current Price"] = df["Current Price"].str.replace(old, new)
+
+    def save_to_excel(self, df, url):
+        """
+        Save the DataFrame to an Excel file.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to save.
+            url (str): The eMag URL used for generating the file name.
+        """
+        url_file_name = url.split("/")[-1]
+        file_name = f"{date.today().strftime('%b-%d-%Y')}_eMag_{url_file_name}.xlsx"
+        df.to_excel(file_name)
 
 
-while True:
-    userInput = input("Adauga link-ul eMag aici: ")
-    if userInput != "":
-        break
-        
-try:
-    url = userInput
-    urlFileName = url.split("/")
-    urlFileName = urlFileName[3]
-    url += "/c"
-    user_agent = str(requests.get('https://httpbin.org/user-agent'))
-    data = requests.get(url=url, headers={"user-agent": user_agent})
-    soup = BeautifulSoup(data.text, "html.parser")
-    
-    # find the page count
-    pageCount = soup.find("span", {"class": "visible-xs"})
-    pageCount = re.findall(r'((?<=\">1 din ).*([^\r]*)(?=</span>))', str(pageCount))
-    pageCount = str(pageCount[0]).strip("('")
-    pageCount = int(pageCount.strip("', '')"))
+if __name__ == "__main__":
+    while True:
+        user_input = input("Add eMag link here: ")
+        if user_input != "":
+            break
 
-    # generate threads for each page
-    threads = []
-    for i in range(1, pageCount + 1):
-        threadObj = threading.Thread(target=emag, args=(i,))
-        threads.append(threadObj)
-    y = [x.start() for x in threads]
-    y = [x.join() for x in threads]
-
-    # clean the retrieved data
-    badChars = [
-        ('\[\(\'', ''),
-        ('\,\)\]', ''),
-        ('\[\]', ''),
-        ('\[\'', ''),
-        ('\'', ''),
-        ('/\"', ''),
-        (', \)\]', ''),
-        ('\]', ''),
-        ('\&amp\;#039\;', '\'')
-    ]
-
-    for old, new in badChars:
-        productLink[:] = [re.sub(old, new, str(x)) for x in productLink]
-        productsTitle[:] = [re.sub(old, new, str(x)) for x in productsTitle]
-        productsPrice[:] = [re.sub(old, new, str(x)) for x in productsPrice]
-        productsPriceII[:] = [re.sub(old, new, str(x)) for x in productsPriceII]
-        productsPriceOld[:] = [re.sub(old, new, str(x))  for x in productsPriceOld]
-        productsPriceOldII[:] = [re.sub(old, new, str(x))  for x in productsPriceOldII]
-
-    productsTitle[:] = [str(x).split(",") for x in productsTitle]
-    productsTitle[:] = [x[0] for x in productsTitle]
-    productLink[:] = [str(x).split(",") for x in productLink]
-    productLink[:] = [x[0] for x in productLink]
-
-    df = pandas.DataFrame({"Titlu": productsTitle, "productsPrice": productsPrice, "productsPriceII": productsPriceII, "productsPriceOld": productsPriceOld, "productsPriceOldII": productsPriceOldII, "Link": productLink})
-
-    # concat the two temp price columns
-    df["Pret Final"] = df["productsPrice"].astype(str)+ "," + df["productsPriceII"].astype(str)
-    df["Pret Original"] = df["productsPriceOld"].astype(str)+ "," + df["productsPriceOldII"].astype(str)
-
-    # replace empty values "," with blank values
-    df["Pret Original"][df["Pret Original"] == ","] = ""
-
-    # drop empty columns and reassign the existing columns back to the dataframe
-    df = df[["Titlu", "Pret Original", "Pret Final", "Link"]]
-    df = df[df.Titlu != '']
-    df.set_index("Titlu", inplace=True)
-    df.to_excel(str(date.today().strftime("%b-%d-%Y"))+"_eMag_"+urlFileName+".xlsx")
-    ctypes.windll.user32.MessageBoxW(0, "Preturile au fost extrase.", "Warning", 0)
-except:
-    ctypes.windll.user32.MessageBoxW(0, "Link-ul nu este valid. Te rog incearca din nou.", "Warning", 0)
+    scraper = EmagScraper()
+    scraper.process_data(user_input)
